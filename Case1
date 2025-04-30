@@ -112,3 +112,205 @@ for food in food_list:
 
 # Preview the DataFrame after adding the new columns
 wine_df.head()
+
+##Task03
+
+# Import libraries
+import pandas as pd
+import matplotlib.pyplot as plt
+from transformers import pipeline
+
+# Use the raw file link from GitHub
+url = "https://raw.githubusercontent.com/Hasindu-Sahan/wine-data-analysis-2025/main/wine_review.csv"
+
+# Load the CSV directly from GitHub
+reviews_df = pd.read_csv(url)
+reviews_df
+
+# Preview the dataset
+reviews_df.head()
+
+# Load the zero-shot classifier
+classifier = pipeline("zero-shot-classification", model="facebook/bart-large-mnli")
+classifier
+
+# Define the target categories
+labels = [
+    "talks about food combinations",
+    "talks about taste",
+    "talks about value for money",
+    "other"
+]
+
+
+
+# Define a function to classify a review
+def classify_review(review):
+    result = classifier(review, candidate_labels=labels)
+    return result['labels'][0]  # Select the top label
+
+# Apply the function to classify each review
+reviews_df['talks_about'] = reviews_df['review'].apply(classify_review)
+
+
+# Plot the distribution of the classified categories
+reviews_df['talks_about'].value_counts().plot(kind='bar', color='coral')
+
+plt.title("Classification of Wine Reviews")
+plt.xlabel("Category")
+plt.ylabel("Number of Reviews")
+plt.xticks(rotation=45)
+plt.grid(axis='y', linestyle='--', alpha=0.7)
+plt.tight_layout()
+plt.show()
+
+
+##Task04
+
+#Import libraries
+import pandas as pd
+import plotly.express as px
+
+
+# Load the dataset directly from the GitHub raw URL
+url = "https://raw.githubusercontent.com/Hasindu-Sahan/wine-data-analysis-2025/main/cleaned_wine_data.csv"
+wine_df = pd.read_csv(url)
+
+# Filter the dataset for France
+filtered_df = wine_df[wine_df['Country'] == 'France']
+
+# Create the histogram for Rating Distribution
+fig1 = px.histogram(filtered_df, x='Rating', nbins=20, title='Rating Distribution')
+
+# Show the plot
+fig1.show()
+
+fig2 = px.scatter(
+    filtered_df,
+    x='Price',
+    y='Rating',
+    color='Wine style',
+    title='Price vs Rating'
+)
+fig2.show()
+
+
+style_avg = (
+    filtered_df.groupby('Wine style')['Rating']
+    .mean()
+    .nlargest(10)
+    .reset_index()
+)
+
+fig3 = px.bar(
+    style_avg,
+    x='Wine style',
+    y='Rating',
+    title='Top 10 Wine Styles by Average Rating'
+)
+fig3.show()
+
+
+grape_counts = (
+    filtered_df['Grapes']
+    .value_counts()
+    .nlargest(10)
+    .reset_index()
+)
+grape_counts.columns = ['Grape', 'Count']
+
+fig4 = px.pie(
+    grape_counts,
+    names='Grape',
+    values='Count',
+    title='Most Popular Grape Types'
+)
+fig4.show()
+
+
+fig5 = px.box(
+    filtered_df,
+    x='Wine style',
+    y='Acidic',
+    title='Wine Style by Acidity',
+    height=600
+)
+fig5.update_layout(xaxis_tickangle=-45)
+fig5.show()
+
+
+!pip install dash jupyter-dash
+
+!pip install dash==2.11.1 jupyter-dash==0.4.2
+
+!pip install dash==2.9.0
+
+import dash
+from dash import dcc, html, Input, Output
+import pandas as pd
+import plotly.express as px
+
+# Load cleaned dataset
+wine_df = pd.read_csv('cleaned_wine_data.csv')
+
+# Initialize the Dash app
+app = dash.Dash(__name__)
+app.title = "Wine Data Dashboard"
+
+# Layout of the dashboard
+app.layout = html.Div([
+    html.H1("Wine Analytics Dashboard", style={'textAlign': 'center'}),
+
+    html.Div([
+        html.Label("Select Country:"),
+        dcc.Dropdown(
+            id='country-dropdown',
+            options=[{'label': c, 'value': c} for c in wine_df['Country'].unique()],
+            value='France',
+            clearable=False
+        )
+    ], style={'width': '30%', 'padding': '10px'}),
+
+    dcc.Graph(id='rating-distribution'),
+    dcc.Graph(id='price-vs-rating'),
+    dcc.Graph(id='top-wine-styles'),
+    dcc.Graph(id='grape-popularity'),
+    dcc.Graph(id='wine-style-by-acidity')
+])
+
+# Callback to update graphs
+@app.callback(
+    [
+        Output('rating-distribution', 'figure'),
+        Output('price-vs-rating', 'figure'),
+        Output('top-wine-styles', 'figure'),
+        Output('grape-popularity', 'figure'),
+        Output('wine-style-by-acidity', 'figure')
+    ],
+    Input('country-dropdown', 'value')
+)
+def update_charts(selected_country):
+    filtered_df = wine_df[wine_df['Country'] == selected_country]
+
+    fig1 = px.histogram(filtered_df, x='Rating', nbins=20, title='Rating Distribution')
+
+    fig2 = px.scatter(filtered_df, x='Price', y='Rating', color='Wine style', title='Price vs Rating')
+
+    style_avg = filtered_df.groupby('Wine style')['Rating'].mean().nlargest(10).reset_index()
+    fig3 = px.bar(style_avg, x='Wine style', y='Rating', title='Top 10 Wine Styles by Average Rating')
+
+    grape_counts = filtered_df['Grapes'].value_counts().nlargest(10).reset_index()
+    grape_counts.columns = ['Grape', 'Count']
+    fig4 = px.pie(grape_counts, names='Grape', values='Count', title='Most Popular Grape Types')
+
+    fig5 = px.box(filtered_df, x='Wine style', y='Acidic', title='Wine Style by Acidity', height=600)
+    fig5.update_layout(xaxis_tickangle=-45)
+
+    return fig1, fig2, fig3, fig4, fig5
+
+# Run the app externally
+app.run_server(debug=True, use_reloader=False)
+
+
+
+
